@@ -1,0 +1,13 @@
+{$RUSHLINE_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 4GB
+	}
+	reverse_proxy api:8000 {
+		flush_interval -1
+		transport http {
+			read_timeout 30m
+			write_timeout 30m
+		}
+	}
+}

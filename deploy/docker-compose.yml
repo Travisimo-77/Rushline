@@ -1,0 +1,30 @@
+# docker compose -f deploy/docker-compose.yml up -d --build
+# Set RUSHLINE_DOMAIN to a domain pointing at this server for automatic HTTPS (required for iPhone "Add to Home Screen" app mode).
+services:
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    environment:
+      RUSHLINE_INPROC_WORKERS: "0"
+      RUSHLINE_SECRET: ${RUSHLINE_SECRET:?set a long random secret}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes: [data:/data]
+    restart: unless-stopped
+  worker:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    command: ["python", "-m", "app.worker"]
+    environment:
+      RUSHLINE_SECRET: ${RUSHLINE_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      RUSHLINE_WHISPER_MODEL: ${RUSHLINE_WHISPER_MODEL:-small}
+    volumes: [data:/data]
+    restart: unless-stopped
+    deploy: { replicas: 2 }
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment: { RUSHLINE_DOMAIN: "${RUSHLINE_DOMAIN:-localhost}" }
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile, caddy:/data]
+    restart: unless-stopped
+volumes: { data: {}, caddy: {} }
